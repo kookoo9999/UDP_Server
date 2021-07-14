@@ -187,12 +187,15 @@ static UINT RecvFunc(LPVOID pVoid)
 	
 	int arr[100] = { 0, };
 	double size = sizeof(Buffer);
-	
+	BOOL bReceive[5] = { FALSE, };
+	memset(bReceive, FALSE, sizeof(bReceive));
+
 	int count = 0;
 	ST_HEADER st1; //header data 받아와서 분류
 	ST_HDATA st_oHeader; // data output header 분류
 	ST_CONFIG st_config; //config output
 	ST_MDATA st_mData; //measurement data output
+	ST_1 st_beam;
 	
 	int pCount = 0; //packet count
 	
@@ -221,11 +224,23 @@ static UINT RecvFunc(LPVOID pVoid)
 
 	int nClient_Size = sizeof(dlg->m_ClientInfo);
 	char mData[totalLen] = { 0, }; //합친 패킷 저장
-
+	unsigned long id1 = 0; //같은 Packet 확인용
+	
 	while (1)
 	{
 		//dlg->img = Mat::zeros(1000, 1000, CV_8UC3);
-		
+		dlg->img = Mat::zeros(1000, 1000, CV_8UC3);
+		line(dlg->img, Point(500, 0), Point(500, 1000), Scalar(0, 0, 255));
+		line(dlg->img, Point(0, 500), Point(1000, 500), Scalar(0, 0, 255));
+		circle(dlg->img, Point(500, 500), 10, Scalar(0, 0, 255), 1, 8, 0);
+		circle(dlg->img, Point(500, 500), 25, Scalar(0, 0, 255), 1, 8, 0);
+		circle(dlg->img, Point(500, 500), 50, Scalar(0, 0, 255), 1, 8, 0);
+		circle(dlg->img, Point(500, 500), 100, Scalar(0, 0, 255), 1, 8, 0);
+		circle(dlg->img, Point(500, 500), 200, Scalar(0, 0, 255), 1, 8, 0);
+		circle(dlg->img, Point(500, 500), 300, Scalar(0, 0, 255), 1, 8, 0);
+		circle(dlg->img, Point(500, 500), 400, Scalar(0, 0, 255), 1, 8, 0);
+		circle(dlg->img, Point(500, 500), 500, Scalar(0, 0, 255), 1, 8, 0);
+		imshow("lidarPoint", dlg->img);
 		
 		// wait for receive . save Client info 
 		nRecvLen = recvfrom(dlg->m_ServerSocket, reinterpret_cast<char*>(Buffer), 2000, 0, (SOCKADDR*)&dlg->m_ClientInfo, &nClient_Size);
@@ -234,169 +249,132 @@ static UINT RecvFunc(LPVOID pVoid)
 
 		int nOffset = 0;
 		int mOffset = 24; //without header 24byte
-
+		
+		unsigned long idc = 0;
 		//read the each packet header 
 		memcpy(&st1, &Buffer[nOffset], sizeof(st1));
+		if (st1.Fragment_offset == 0) 
+		{
+			id1 = st1.Identification;
+			
+		}
+		
+		
 		nOffset += sizeof(st1);
 		
 		//thorugh the Fragment Offset , make the total_data_packet
-
-		switch (st1.Fragment_offset)
+		if (id1 == st1.Identification)
 		{
-		case pfirst: //1번째 패킷
-			if (pCount != 0) 
+			switch (st1.Fragment_offset)
 			{
-				memset(mData, 0, sizeof(mData));
-				pCount = 0;
-			}
-			else
-			{
+			case pfirst: //1번째 패킷
+
 				memcpy(&mData[pfirst], &Buffer[mOffset], datalen);
-				pCount++;
-			}
-			//mOffset += sizeof(Buffer);
-			//pCount+=1;
-			break;
-		case psecond: //2번째 패킷 2:1436 3:2872 4:4308 5:5744 6:7180
-			if (pCount != 1)
-			{
-				memset(mData, 0, sizeof(mData));
-				pCount = 0;
-			}
-			else
-			{
+				bReceive[0] = TRUE;
+
+				//mOffset += sizeof(Buffer);
+				//pCount+=1;
+				break;
+			case psecond: //2번째 패킷 2:1436 3:2872 4:4308 5:5744 6:7180
 				memcpy(&mData[psecond], &Buffer[mOffset], datalen);
-				pCount++;
-			}
-			//mOffset += sizeof(Buffer);
-			//pCount += 1;
-			break;
-		case pthird: //3번째 패킷
-			if (pCount != 2)
-			{
-				memset(mData, 0, sizeof(mData));
-				pCount = 0;
-			}
-			else
-			{
+				bReceive[1] = TRUE;
+
+				//mOffset += sizeof(Buffer);
+				//pCount += 1;
+				break;
+			case pthird: //3번째 패킷
 				memcpy(&mData[pthird], &Buffer[mOffset], datalen);
-				pCount++;
-			}
-			//mOffset += sizeof(Buffer);
-			//pCount += 1;
-			break;
-		case pfour: //4번째 패킷
-			if (pCount != 3)
-			{
-				memset(mData, 0, sizeof(mData));
-				pCount = 0;
-			}
-			else
-			{
+				bReceive[2] = TRUE;
+
+				//mOffset += sizeof(Buffer);
+				//pCount += 1;
+				break;
+			case pfour: //4번째 패킷
 				memcpy(&mData[pfour], &Buffer[mOffset], datalen);
-				pCount++;
+				bReceive[3] = TRUE;
+				//mOffset += sizeof(Buffer);
+				//pCount += 1;
+				break;
+			case pfive: //5번째 패킷
+				memcpy(&mData[pfive], &Buffer[mOffset], lastlen);
+				bReceive[4] = TRUE;
+				//mOffset += sizeof(Buffer);
+				//pCount += 1;
+				break;
+			//case plast: //마지막 6번째 패킷 
+				//memcpy(&mData[plast], &Buffer[mOffset], lastlen);
+				//bReceive[5] = TRUE;
+				//pCount += 1;
+			default:
+				break;
 			}
-			//mOffset += sizeof(Buffer);
-			//pCount += 1;
-			break;
-		case pfive: //5번째 패킷
-			if (pCount != 4)
-			{
-				memset(mData, 0, sizeof(mData));
-				pCount = 0;
-			}
-			else
-			{
-				memcpy(&mData[pfive], &Buffer[mOffset], datalen);
-				pCount++;
-			}
-			//mOffset += sizeof(Buffer);
-			//pCount += 1;
-			break;
-		case plast: //마지막 6번째 패킷 
-			if (pCount != 5)
-			{
-				memset(mData, 0, sizeof(mData));
-				pCount = 0;
-			}
-			else
-			{
-				memcpy(&mData[plast], &Buffer[mOffset], lastlen);
-				pCount++;
-			}
-			//pCount += 1;
-		default:
-			break;
 		}
 		
-		//if complete packet, Put in data to each Structure
-		if (pCount == 6)
-		{
-			dlg->img = Mat::zeros(1000, 1000, CV_8UC3);
-			line(dlg->img, Point(500, 0), Point(500, 1000), Scalar(0, 0, 255));
-			line(dlg->img, Point(0, 500), Point(1000, 500), Scalar(0, 0, 255));
-			circle(dlg->img, Point(500, 500), 10, Scalar(0, 0, 255), 1, 8, 0);
-			circle(dlg->img, Point(500, 500), 25, Scalar(0, 0, 255), 1, 8, 0);
-			circle(dlg->img, Point(500, 500), 50, Scalar(0, 0, 255), 1, 8, 0);
-			circle(dlg->img, Point(500, 500), 100, Scalar(0, 0, 255), 1, 8, 0);
-			circle(dlg->img, Point(500, 500), 200, Scalar(0, 0, 255), 1, 8, 0);
-			circle(dlg->img, Point(500, 500), 300, Scalar(0, 0, 255), 1, 8, 0);
-			circle(dlg->img, Point(500, 500), 400, Scalar(0, 0, 255), 1, 8, 0);
-			circle(dlg->img, Point(500, 500), 500, Scalar(0, 0, 255), 1, 8, 0);
-			imshow("lidarPoint", dlg->img);
-			memcpy(&st_oHeader, &mData, sizeof(st_oHeader));
-			//unsigned long time=0;
-			//memcpy(&time, &mData[28], 4);
+		BOOL bAllReceive = bReceive[0] & bReceive[1] & bReceive[2] & bReceive[3] & bReceive[4];
 
+		//if complete packet, Put in data to each Structure
+		if (bAllReceive==TRUE)
+		{
+			
+			memcpy(&st_oHeader, &mData, sizeof(st_oHeader));
 			memcpy(&st_config, &mData[configOff], sizeof(st_config));
-			memcpy(&st_mData, &mData[dataOff], 6608);
-			//unsigned long d0;
-			//memcpy(&d0, &mData[124], 4);			
-			//wchar_t d1 = 0;
-			//memcpy(&d1, &mData[132], 2);
-			wchar_t d_arr[NOBD] = { 0, }; //distance array for each 1651 beams 
-					
-			//CUDP_ServerDlg dlg;			
-			memcpy(&d_arr, &mData[128], sizeof(d_arr));
+			memcpy(&st_mData, &mData[dataOff], sizeof(st_mData));
+			
+			int off = 128; //each beam's distance offset
+			
 			double angle = sAngle;
+			
 			int Cx = 500;
 			int Cy = 500;
 			//int r[NOBD] = {0,};
 			for (int i = 0; i < NOBD; i++) {
 				//r[i] = d_arr[i];
-				if (angle >= 360) { angle -= 360; }
-				//int Cx=0, Cy=0;
-				dlg->dX[i] = cos(angle * opi / 180) * d_arr[i];
-				dlg->dY[i] = sin(angle * opi / 180) * d_arr[i];
-				/*
+				double dRadian = DEGREE_TO_RADIAN(angle);
+				//if (angle >= 360) { angle -= 360; }
+				//int Cx=0, Cy=0;				
+				memcpy(&st_beam, &mData[off], sizeof(st_beam));
+				off += sizeof(st_beam);
+				dlg->dX[i] = cos(dRadian) * st_beam.Distance;
+				dlg->dY[i] = sin(dRadian) * st_beam.Distance;
+				circle(dlg->img, Point(500 + dlg->dX[i]/10, 500 - dlg->dY[i]/10), 1, Scalar(255, 255, 0), 1, 8, 0);
+				imshow("lidarPoint", dlg->img);
+				angle += rAngular;
+			/*
 				if (angle >= 0 && angle <= 90)  //1사분면
 				{
-					dlg->dX[i] = abs(cos(angle * opi / 180) * r);
-					dlg->dY[i] = abs(sin(angle * opi / 180) * r);
+					dlg->dX[i]=abs(dlg->dX[i]);
+					dlg->dY[i]=abs(dlg->dY[i]);
+					//dlg->dX[i]= abs(cos(angle * opi / 180) * d_arr[i]);
+					//dlg->dY[i] = abs(sin(angle * opi / 180) * d_arr[i]);
 					//circle(dlg->img, Point(Cx + dlg->dX[i] , Cy + dlg->dY[i]), 1, Scalar(255, 255, 0), 1, 8, 0);
 					
 				}
 				else if (angle > 90 && angle < 180) //2사분면
 				{
-					dlg->dX[i] = -1*abs(cos((angle)*opi / 180) * r);
-					dlg->dY[i] = abs(sin((180-angle)*opi / 180) * r);
+					dlg->dX[i]=abs(dlg->dX[i]) * -1;
+					dlg->dY[i]=abs(dlg->dY[i]);
+					//dlg->dX[i] = -1*abs(cos((angle)*opi / 180) * d_arr[i]);
+					//dlg->dY[i] = abs(sin((180-angle)*opi / 180) * d_arr[i]);
 					//circle(dlg->img, Point(Cx + dlg->dX[i], Cy + dlg->dY[i]), 1, Scalar(255, 255, 0), 1, 8, 0);
 				}
 				else if (angle > 180 && angle <= eAngle) //3사분면
 				{
-					dlg->dX[i] = -1*abs(cos((angle)*opi / 180)*r);
-					dlg->dY[i] = -1*abs(sin((angle)*opi / 180)*r);
+					dlg->dX[i] = abs(dlg->dX[i]) * -1;
+					dlg->dY[i] = abs(dlg->dY[i]) * -1;
+					//dlg->dX[i] = -1*abs(cos((angle)*opi / 180)*d_arr[i]);
+					//dlg->dY[i] = -1*abs(sin((angle)*opi / 180)*d_arr[i]);
 					//circle(dlg->img, Point(Cx + dlg->dX[i], Cy + dlg->dY[i]), 1, Scalar(255, 255, 0), 1, 8, 0);
 				}
 				else if(angle >= sAngle && angle < 360) //4사분면
 				{
-					dlg->dX[i] = abs(cos((angle)*opi / 180)*r);
-					dlg->dY[i] = -1*abs(sin((angle)*opi / 180)*r);
+					dlg->dX[i] = abs(dlg->dX[i]);
+					dlg->dY[i] = abs(dlg->dY[i]) * -1;
+					//dlg->dX[i] = abs(cos((angle)*opi / 180)*d_arr[i]);
+					//dlg->dY[i] = -1*abs(sin((angle)*opi / 180)*d_arr[i]);
 					//circle(dlg->img, Point(Cx + dlg->dX[i], Cy + dlg->dY[i]), 1, Scalar(255, 255, 0), 1, 8, 0);
-				}*/
-				circle(dlg->img, Point(Cx + dlg->dX[i], Cy - dlg->dY[i]), 1, Scalar(255, 255, 0), 1, 8, 0);
-				imshow("lidarPoint", dlg->img);
-
+				}
+				*/
+				
 
 				//-------------------다이얼로그에 뿌리는것들-------------------------------
 				//dlg.Draw_Point(i);
@@ -454,14 +432,22 @@ static UINT RecvFunc(LPVOID pVoid)
 				//::DeleteDC(hdc);				// HDC 지우기
 				
 				//find x,y for next beam's 
-				angle += rAngular; 
+				//angle += rAngular; 
 
 				//imshow("lidarPoint", dlg->img);
 				
 			}
 			
 			//After last packet, next packet is 1st
-			pCount = 0;
+			
+			memset(bReceive, FALSE, sizeof(bReceive));
+			memset(&st1, 0, sizeof(st1));
+			memset(&mData, 0, sizeof(mData));
+			memset(&st_oHeader, 0,sizeof(st_oHeader));
+			memset(&st_config, 0, sizeof(st_config));
+			memset(&dlg->dX, 0, sizeof(dlg->dX));
+			memset(&dlg->dY, 0, sizeof(dlg->dY));
+			
 			
 			
 		}
@@ -608,11 +594,11 @@ static UINT RecvFunc(LPVOID pVoid)
 BOOL CUDP_ServerDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
-	
-	// 시스템 메뉴에 "정보..." 메뉴 항목을 추가합니다.
 	img = Mat::zeros(1000, 1000, CV_8UC3);
 	//circle(img, Point(100, 100), 1, Scalar(255, 255, 0), 1, 8, 0);
 	imshow("lidarPoint", img);
+	// 시스템 메뉴에 "정보..." 메뉴 항목을 추가합니다.
+	
 	// IDM_ABOUTBOX는 시스템 명령 범위에 있어야 합니다.
 	ASSERT((IDM_ABOUTBOX & 0xFFF0) == IDM_ABOUTBOX);
 	ASSERT(IDM_ABOUTBOX < 0xF000);

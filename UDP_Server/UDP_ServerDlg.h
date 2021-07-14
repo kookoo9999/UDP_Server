@@ -6,8 +6,8 @@
 //--------length
 #define bufLen 1460
 #define datalen 1436
-#define lastlen 199
-#define totalLen 7379
+#define lastlen 1004
+#define totalLen 6748
 //packet oreder 1st=0
 #define pfirst 0
 #define psecond 1436 
@@ -26,12 +26,14 @@
 #define rAngular 0.1665657177468201
 
 //Start Angle
-#define sAngle 312.5 //-47.5 
+#define sAngle -47.5 //-47.5 
 #define eAngle 227.5
 #define tAngle 275
 
 //pi
 #define opi 3.1415926
+#define DEGREE_TO_RADIAN(degree) ((opi/180)*(degree)) // 60분법 -> 호도법 
+#define RADIAN_TO_DEGREE(radian) ((180/opi)*(radian)) // 호도법 -> 60분법
 
 // CUDP_ServerDlg 대화 상자
 class CUDP_ServerDlg : public CDialogEx

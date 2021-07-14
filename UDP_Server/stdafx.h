@@ -127,12 +127,27 @@ typedef struct _ST_BLOCK_CONFIG
 	unsigned char Reserved_confing2[4];
 
 }ST_CONFIG;
-
+/*
 typedef struct _ST_BLOCK_DATA
 {
 	unsigned long dNumberOfBeams; 
 	wchar_t Distance; //mm
 	unsigned char RSSI;
+
+}ST_MDATA;*/
+
+typedef struct _ST_1
+{
+	wchar_t Distance; //mm
+	unsigned char RSSI;
+	unsigned char Status;
+
+}ST_1;
+
+typedef struct _ST_BLOCK_DATA
+{
+	unsigned long dNumberOfBeams;
+	ST_1 *pData;
 
 }ST_MDATA;
 
